@@ -1,0 +1,60 @@
+
+import os
+import requests
+from kivy.core.audio import SoundLoader
+from kivy.app import App
+from kivy.clock import Clock
+
+API_KEY = os.getenv("ELEVENLABS_API_KEY")
+VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID")
+
+def cherry_speak(text):
+    if not API_KEY or not VOICE_ID:
+        print("CHERRY AI: Voice settings missing")
+        return
+
+    url = (
+        "https://api.elevenlabs.io/v1/text-to-speech/"
+        + VOICE_ID
+    )
+
+    headers = {
+        "xi-api-key": API_KEY,
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "text": text,
+        "model_id": "eleven_v4",
+        "output_format": "mp3_44100_128"
+    }
+
+    try:
+        response = requests.post(
+            url,
+            headers=headers,
+            json=data,
+            timeout=60
+        )
+        response.raise_for_status()
+
+        path = os.path.join(
+            App.get_running_app().user_data_dir,
+            "cherry_voice.mp3"
+        )
+
+        with open(path, "wb") as f:
+            f.write(response.content)
+
+        def play_voice(dt):
+            sound = SoundLoader.load(path)
+            if sound:
+                sound.play()
+            else:
+                print("CHERRY AI: Audio playback failed")
+
+        Clock.schedule_once(play_voice, 0)
+
+    except requests.RequestException as error:
+        print("CHERRY AI voice error:", error)
+        
